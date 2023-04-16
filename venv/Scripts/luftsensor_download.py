@@ -6,6 +6,9 @@ import pandas as pd
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+from tkinter import *
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import (FigureCanvasTkAgg,NavigationToolbar2Tk)
 
 class LuftsensorDownload:
 
@@ -59,17 +62,31 @@ class LuftsensorDownload:
     def visualize_luftsensor_data(self,sensor_id):
         conn = conn = sqlite3.connect('Luftsensor')
         c = conn.cursor()
+        window = Tk()
+        fig = Figure(figsize=(15,10),dpi=100)
+        plot1 = fig.add_subplot(111)
         xpoints=[]
         ypoints=[]
-        c.execute('SELECT timestamp,P1 FROM luftsensor_data WHERE sensor_id =?',(sensor_id, ))
-        rows = c.fetchall()
-        for row in rows:
-           xpoints.append(row[0])
-           ypoints.append(row[1])
-        plt.plot(xpoints,ypoints)
+        dates = self.get_dates_of_year(2022)
+        for date in dates:
+            date = date[:-3]
+            print(date)
+            select = "SELECT timestamp,avg(P1) FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{date}%'".format(sensor_id=sensor_id,date=date)
+            c.execute(select)
+            row = c.fetchall()
+            xpoints.append(date)
+            ypoints.append(row[0][1])
+        plot1.plot(xpoints,ypoints)
+        plot1.set_xlabel("Datum")
+        plot1.set_ylabel("P1")
+        plot1.set_title("Feinstaubwerte für den Sensor {sensor_id}".format(sensor_id=sensor_id))
         labels = xpoints
-        plt.xticks(xpoints,labels,rotation='vertical')
-        plt.show()
+        plot1.set_xticks(xpoints,labels,rotation='vertical')       # Drehung der Datumse
+        canvas = FigureCanvasTkAgg(fig, master=window)
+        canvas.draw()
+        canvas.get_tk_widget().pack()
+        window.title('Feinstaubsensorwerte')
+        window.mainloop()
 
     def get_dates_of_year(self,year):
         """
