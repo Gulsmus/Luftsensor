@@ -59,7 +59,19 @@ class LuftsensorDownload:
         conn.commit()
         conn.close()
 
-    def visualize_luftsensor_data(self,sensor_id):
+    def check_database(self,year, sensor_id):
+        conn = sqlite3.connect('Luftsensor')
+        c = conn.cursor()
+        check = "SELECT * FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{year}%' LIMIT 1".format(sensor_id=sensor_id,year=year)
+        c.execute(check)
+        row = c.fetchall()
+        c.close()
+        if len(row) >= 1:
+            return True
+        else:
+            return False
+
+    def visualize_luftsensor_data(self,year,sensor_id):
         conn = conn = sqlite3.connect('Luftsensor')
         c = conn.cursor()
         window = Tk()
@@ -67,7 +79,7 @@ class LuftsensorDownload:
         plot1 = fig.add_subplot(111)
         xpoints=[]
         ypoints=[]
-        dates = self.get_dates_of_year(2022)
+        dates = self.get_dates_of_year(int(year))
         for date in dates:
             date = date[:-3]
             print(date)
