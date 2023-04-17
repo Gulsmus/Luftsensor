@@ -19,7 +19,7 @@ class LuftsensorDownload:
         :param sensor_type: Den richtigen Sensortypen angeben
         :param data_id:     id des entsprechenden Sensors
         """
-        dates = self.get_dates_of_year(year)
+        dates = self.get_dates_of_year(int(year))
 
         for date in dates:
             filename = '{date}_{sensor_type}_sensor_{data_id}.csv'.format(date=date,sensor_type=sensor_type,data_id=data_id)
