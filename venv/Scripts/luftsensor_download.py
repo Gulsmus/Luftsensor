@@ -31,7 +31,8 @@ class LuftsensorDownload:
                 open('venv/Luftsensor_CSV/'+filename,'wb').write(download.content)
                 self.import_to_database(filename)
             else:
-                print(download_path+ ':'+ response.status_code)
+                #print(download_path+ ':'+ str(response.status_code))
+                return False
 
 
     def import_to_database(self, filename):
@@ -72,7 +73,7 @@ class LuftsensorDownload:
             return False
 
     def visualize_luftsensor_data(self,year,sensor_id):
-        conn = conn = sqlite3.connect('Luftsensor')
+        conn = sqlite3.connect('Luftsensor')
         c = conn.cursor()
         window = Tk()
         fig = Figure(figsize=(15,10),dpi=100)
@@ -80,18 +81,30 @@ class LuftsensorDownload:
         xpoints=[]
         ypoints=[]
         dates = self.get_dates_of_year(int(year))
+        months = []
         for date in dates:
-            date = date[:-3]
-            print(date)
-            select = "SELECT timestamp,avg(P1) FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{date}%'".format(sensor_id=sensor_id,date=date)
+            if not date[:-3] in months:
+                months.append(date[:-3])
+        for month in months:
+            #date = date[:-3]
+            print(month)
+            select = "SELECT timestamp,avg(P1) FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{month}%'".format(sensor_id=sensor_id,month=month)
             c.execute(select)
             row = c.fetchall()
-            xpoints.append(date)
+            xpoints.append(month)
             ypoints.append(row[0][1])
-        plot1.plot(xpoints,ypoints)
+        plot1.plot(xpoints,ypoints,label='month_avg')
+        avg=self.average(year,sensor_id)
+        max=self.maximum(year,sensor_id)
+        min=self.minimum(year,sensor_id)
+        plot1.hlines(y=avg,xmin=0,xmax=11,color='y',label='yearly_avg')
+        if not max >= avg*10:
+           plot1.hlines(y=max, xmin=0, xmax=11, color='r', label='yearly_max')
+        plot1.hlines(y=min, xmin=0, xmax=11, color='g', label='yearly_min')
         plot1.set_xlabel("Datum")
         plot1.set_ylabel("P1")
         plot1.set_title("Feinstaubwerte für den Sensor {sensor_id}".format(sensor_id=sensor_id))
+        plot1.legend()
         labels = xpoints
         plot1.set_xticks(xpoints,labels,rotation='vertical')       # Drehung der Datumse
         canvas = FigureCanvasTkAgg(fig, master=window)
@@ -99,6 +112,30 @@ class LuftsensorDownload:
         canvas.get_tk_widget().pack()
         window.title('Feinstaubsensorwerte')
         window.mainloop()
+
+    def average(self,year,sensor_id):
+        conn = sqlite3.connect('Luftsensor')
+        c=conn.cursor()
+        date = year
+        select = "SELECT avg(P1) FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{date}%'".format(sensor_id=sensor_id,date=date)
+        c.execute(select)
+        return c.fetchall()[0]
+
+    def maximum(self,year,sensor_id):
+        conn = sqlite3.connect('Luftsensor')
+        c=conn.cursor()
+        date = year
+        select = "SELECT max(P1) FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{date}%'".format(sensor_id=sensor_id,date=date)
+        c.execute(select)
+        return c.fetchall()[0]
+
+    def minimum(self,year,sensor_id):
+        conn = sqlite3.connect('Luftsensor')
+        c=conn.cursor()
+        date = year
+        select = "SELECT min(P1) FROM luftsensor_data WHERE sensor_id = {sensor_id} AND timestamp LIKE '{date}%'".format(sensor_id=sensor_id,date=date)
+        c.execute(select)
+        return c.fetchall()[0]
 
     def get_dates_of_year(self,year):
         """
